@@ -8,6 +8,10 @@ const mailTransport = nodemailer.createTransport({
   port: Number(process.env.SMTP_PORT) || 587,
   secure: String(process.env.SMTP_SECURE).toLowerCase() === 'true',
   auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  // Fail fast instead of hanging the login when SMTP is unset/misconfigured.
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000,
 });
 
 function generateOtp() {
@@ -22,12 +26,32 @@ export default async function handler(req, res) {
   if (req.method === 'POST' && req.body.step === 'send') {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email required.' });
+    const emailLower = email.trim().toLowerCase();
 
-    const partner = await findPartnerByEmail(email.trim().toLowerCase());
+    let partner;
+    try {
+      partner = await findPartnerByEmail(emailLower);
+    } catch (err) {
+      console.error('Partner lookup failed:', err);
+      return res.status(502).json({ error: `Could not reach Salesforce: ${err?.message || 'unknown error'}` });
+    }
     if (!partner) {
       return res.status(404).json({
         error: 'We couldn’t match your email to a registered Unframe partner. Use your work email, or contact your Unframe partner manager.',
       });
+    }
+
+    // Test login (demo): skip the emailed code and sign in immediately.
+    if (partner.isTest) {
+      const session = await getSession(req, res);
+      session.partnerAccountId = partner.accountId;
+      session.partnerAccountName = partner.accountName;
+      session.partnerType = partner.partnerType;
+      session.contactId = partner.contactId;
+      session.name = partner.contactName;
+      session.email = emailLower;
+      await session.save();
+      return res.status(200).json({ ok: true, testLogin: true, partnerName: partner.accountName });
     }
 
     const otp = generateOtp();
