@@ -39,6 +39,8 @@ export default function Dashboard() {
   const [tab, setTab] = useState('deals'); // 'deals' | 'accounts'
   const [scope, setScope] = useState('org'); // 'org' | 'mine'
   const [stageFilter, setStageFilter] = useState('All');
+  const [regionFilter, setRegionFilter] = useState('All');
+  const [ownerFilter, setOwnerFilter] = useState('All');
   const [search, setSearch] = useState('');
   const router = useRouter();
 
@@ -60,12 +62,16 @@ export default function Dashboard() {
 
   const scoped = opps.filter(o => (scope === 'mine' ? o.mine : true));
   const stages = Array.from(new Set(opps.map(o => o.StageName))).sort();
+  const regions = Array.from(new Set(opps.map(o => o.region).filter(Boolean))).sort();
+  const owners = Array.from(new Set(opps.map(o => o.owner).filter(Boolean))).sort();
 
   const filteredDeals = scoped
     .filter(o => stageFilter === 'All' || o.StageName === stageFilter)
+    .filter(o => regionFilter === 'All' || o.region === regionFilter)
+    .filter(o => ownerFilter === 'All' || o.owner === ownerFilter)
     .filter(o => {
       if (!search.trim()) return true;
-      const hay = `${o.Account?.Name || ''} ${o.Name || ''} ${o.Partner_Email__c || ''}`.toLowerCase();
+      const hay = `${o.Account?.Name || ''} ${o.Name || ''} ${o.Partner_Email__c || ''} ${o.owner || ''} ${o.region || ''}`.toLowerCase();
       return hay.includes(search.trim().toLowerCase());
     });
 
@@ -143,10 +149,20 @@ export default function Dashboard() {
                     <button className={scope === 'mine' ? 'on' : ''} onClick={() => setScope('mine')}>Registered by me</button>
                   </div>
                   {tab === 'deals' && (
-                    <select value={stageFilter} onChange={e => setStageFilter(e.target.value)} className="mini-select">
-                      <option value="All">All stages</option>
-                      {stages.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
+                    <>
+                      <select value={stageFilter} onChange={e => setStageFilter(e.target.value)} className="mini-select">
+                        <option value="All">All stages</option>
+                        {stages.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      <select value={regionFilter} onChange={e => setRegionFilter(e.target.value)} className="mini-select">
+                        <option value="All">All regions</option>
+                        {regions.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                      <select value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)} className="mini-select">
+                        <option value="All">All owners</option>
+                        {owners.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </>
                   )}
                   <input
                     type="text"
@@ -167,6 +183,8 @@ export default function Dashboard() {
                           <tr>
                             <th>Account</th>
                             <th>Opportunity</th>
+                            <th>Region</th>
+                            <th>Owner</th>
                             <th>Stage</th>
                             <th>Registered by</th>
                             <th>Amount</th>
@@ -181,6 +199,11 @@ export default function Dashboard() {
                                 {o.Name}
                                 {o.mine && <span className="you-tag">You</span>}
                               </td>
+                              <td style={{ fontSize: 13 }}>
+                                {o.region || '—'}
+                                {o.territory && <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>{o.territory}</div>}
+                              </td>
+                              <td style={{ fontSize: 13, color: 'var(--ink-2)' }}>{o.owner || '—'}</td>
                               <td><span className={`badge badge-${stageBadge(o.StageName)}`}>{o.StageName}</span></td>
                               <td style={{ fontSize: 13, color: 'var(--ink-2)' }}>{o.Partner_Email__c || '—'}</td>
                               <td>{fmtMoney(o.Amount)}</td>
