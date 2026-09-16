@@ -20,8 +20,7 @@ function Field({ label, name, required, type = 'text', value, onChange, placehol
   return (
     <div className="form-group">
       <label htmlFor={name}>
-        {label}{required && ' *'}
-        {!required && <span style={{ color: 'var(--ink-3)', fontWeight: 400 }}> (optional)</span>}
+        {label}{required && <span className="req">*</span>}
       </label>
       {textarea ? (
         <textarea id={name} name={name} value={value} onChange={onChange} placeholder={placeholder} required={required} />
@@ -99,36 +98,40 @@ export default function Register() {
         </span>
       </nav>
 
-      <div className="container">
-        <div className="page-header">
-          <h1>Register an Opportunity</h1>
-        </div>
-
-        <div style={{ maxWidth: 620 }}>
-          <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 24, marginTop: -4 }}>
-            Fill out the registration form to provide details about your opportunity. Submitting creates an opportunity in Unframe’s pipeline, tied to your organization; the Unframe team follows up from there.
-          </p>
+      <div className="reg-page">
+        <div className="container">
+          <div className="reg-hero">
+            <span className="reg-pill">Partners</span>
+            <h1>Register an Opportunity</h1>
+            <p>Fill out the registration form to provide details about your opportunity. We’ll follow up with you shortly.</p>
+          </div>
 
           {success && (
             <div className="success-msg">Opportunity registered. It’s now in Unframe’s pipeline. Redirecting…</div>
           )}
           {error && <div className="error-msg">{error}</div>}
 
-          <form onSubmit={handleSubmit}>
-            <div className="form-section">Partner</div>
-            <Field label="Partner Company" name="partnerCompany" required value={v('partnerCompany')} onChange={update} />
-            <Field label="Partner Email" name="partnerEmail" type="email" required value={v('partnerEmail')} onChange={update} />
+          <form onSubmit={handleSubmit} className="reg-card">
+            <div className="form-section">Partner Information</div>
+            <div className="field-row">
+              <Field label="Partner Company" name="partnerCompany" required value={v('partnerCompany')} onChange={update} />
+              <Field label="Partner Email" name="partnerEmail" type="email" required value={v('partnerEmail')} onChange={update} />
+            </div>
             <div className="field-row">
               <Field label="Partner First Name" name="partnerFirstName" required value={v('partnerFirstName')} onChange={update} />
               <Field label="Partner Last Name" name="partnerLastName" required value={v('partnerLastName')} onChange={update} />
             </div>
             <Field label="Distributor" name="distributor" value={v('distributor')} onChange={update} placeholder="If this deal is through a distributor" />
 
-            <div className="form-section">Prospect</div>
-            <Field label="Prospect Company" name="prospectCompany" required value={v('prospectCompany')} onChange={update} />
-            <Field label="Prospect Email" name="prospectEmail" type="email" required value={v('prospectEmail')} onChange={update} />
-            <Field label="Prospect Company Website" name="prospectWebsite" required value={v('prospectWebsite')} onChange={update} placeholder="e.g. acme.com" />
-            <Field label="Prospect Company HQ" name="prospectHQ" required value={v('prospectHQ')} onChange={update} placeholder="City, Country" />
+            <div className="form-section">Prospect Information</div>
+            <div className="field-row">
+              <Field label="Prospect Company" name="prospectCompany" required value={v('prospectCompany')} onChange={update} />
+              <Field label="Prospect Email" name="prospectEmail" type="email" required value={v('prospectEmail')} onChange={update} />
+            </div>
+            <div className="field-row">
+              <Field label="Prospect Company Website" name="prospectWebsite" required value={v('prospectWebsite')} onChange={update} placeholder="e.g. acme.com" />
+              <Field label="Prospect Company HQ" name="prospectHQ" required value={v('prospectHQ')} onChange={update} placeholder="City, Country" />
+            </div>
             <div className="field-row">
               <Field label="Prospect First Name" name="prospectFirstName" required value={v('prospectFirstName')} onChange={update} />
               <Field label="Prospect Last Name" name="prospectLastName" required value={v('prospectLastName')} onChange={update} />
@@ -138,7 +141,7 @@ export default function Register() {
               <Field label="Prospect Phone" name="prospectPhone" type="tel" value={v('prospectPhone')} onChange={update} />
             </div>
 
-            <div className="form-section">Deal</div>
+            <div className="form-section">Deal Information</div>
             <div className="field-row">
               <Field label="Estimated Close Amount" name="closeAmount" type="number" required value={v('closeAmount')} onChange={update} placeholder="e.g. 100000" />
               <Field label="Estimated Close Date" name="closeDate" type="date" required value={v('closeDate')} onChange={update} />
@@ -146,7 +149,7 @@ export default function Register() {
             <Field label="Prospect Date of Meeting" name="meetingDate" type="date" value={v('meetingDate')} onChange={update} />
             <Field label="Deal Description" name="dealDescription" required textarea value={v('dealDescription')} onChange={update} placeholder="Describe the opportunity: the use case, the buyer, and why now." />
 
-            <button className="btn btn-primary" type="submit" disabled={loading || success} style={{ marginTop: 8 }}>
+            <button className="btn btn-primary btn-lg" type="submit" disabled={loading || success}>
               {loading ? 'Registering…' : 'Register opportunity'}
             </button>
           </form>

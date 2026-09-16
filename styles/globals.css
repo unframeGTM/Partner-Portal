@@ -247,14 +247,47 @@ tr:hover td { background: #FAFAFB; }
 /* "You" tag on a deal you personally registered */
 .you-tag { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--info-bg); color: var(--info-fg); vertical-align: middle; }
 
-/* ===== Deal registration form ===== */
-.form-section {
-  margin: 26px 0 12px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--line-soft);
-  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em;
-  color: var(--ink-3);
+/* ===== Deal registration form (mirrors unframe.ai/deal-registration) ===== */
+.reg-page { background: #fff; min-height: calc(100vh - 60px); padding-block: 8px 56px; }
+.reg-hero { text-align: center; padding: 36px 0 24px; }
+.reg-pill {
+  display: inline-block; padding: 6px 18px; margin-bottom: 20px;
+  border: 1px solid var(--line); border-radius: 999px;
+  font-size: 14px; font-weight: 600; color: var(--ink);
 }
-.form-section:first-of-type { margin-top: 8px; }
-.field-row { display: flex; gap: 14px; flex-wrap: wrap; }
-.field-row > .form-group { flex: 1 1 200px; }
+.reg-hero h1 { font-size: 40px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; }
+.reg-hero p { max-width: 620px; margin: 14px auto 0; font-size: 16px; color: var(--ink-2); line-height: 1.6; }
+
+.reg-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 36px 40px 40px;
+  margin-top: 8px;
+}
+
+/* Bold, dark labels with a red required asterisk */
+.reg-card label { font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+.reg-card .req { color: #E5484D; margin-left: 3px; font-weight: 700; }
+
+/* Inputs: rounded, on white against the gray card */
+.reg-card input, .reg-card textarea, .reg-card select {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 13px 14px;
+  font-size: 15px;
+}
+
+/* Extra-bold section headers */
+.form-section {
+  margin: 30px 0 16px;
+  font-size: 20px; font-weight: 800; letter-spacing: -.02em;
+  color: var(--ink);
+}
+.form-section:first-of-type { margin-top: 4px; }
+
+.field-row { display: flex; gap: 20px; flex-wrap: wrap; }
+.field-row > .form-group { flex: 1 1 240px; }
+
+.btn-lg { padding: 14px 28px; font-size: 15px; border-radius: 10px; margin-top: 10px; }
