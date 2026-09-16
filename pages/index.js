@@ -23,10 +23,6 @@ export default function Login() {
 
     const data = await res.json();
     if (res.ok) {
-      if (data.adminLogin) {
-        router.push('/admin');
-        return;
-      }
       if (data.testLogin) {
         router.push('/dashboard');
         return;
@@ -52,7 +48,7 @@ export default function Login() {
 
     const data = await res.json();
     if (res.ok) {
-      router.push('/dashboard');
+      router.push(data.isAdmin ? '/admin' : '/dashboard');
     } else {
       setError(data.error || 'Something went wrong.');
       setLoading(false);

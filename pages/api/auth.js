@@ -31,24 +31,52 @@ function hashOtp(otp) {
   return crypto.createHash('sha256').update(otp).digest('hex');
 }
 
+async function sendOtpEmail(to, otp) {
+  await mailTransport.sendMail({
+    from: process.env.SMTP_FROM || `Unframe Partner Portal <${process.env.SMTP_USER}>`,
+    to,
+    subject: 'Your login code',
+    html: `
+  <div style="font-family: 'Poppins', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; color: #141414;">
+    <div style="height: 4px; background: #7800FF; border-radius: 2px; margin-bottom: 24px;"></div>
+    <div style="font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 20px;"><span style="color: #7800FF;">U</span>nframe</div>
+    <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 8px;">Your login code</h2>
+    <p style="color: #3D3D42; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">Enter this code in the Partner Portal. It expires in 10 minutes.</p>
+    <div style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #141414; margin-bottom: 24px;">${otp}</div>
+    <p style="font-size: 13px; color: #6E6E75; margin: 0;">If you didn’t request this, you can ignore this email.</p>
+  </div>
+    `,
+  });
+}
+
 export default async function handler(req, res) {
   if (req.method === 'POST' && req.body.step === 'send') {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email required.' });
     const emailLower = email.trim().toLowerCase();
 
-    // Internal Unframe admins get the all-partners view. Signed in immediately,
-    // like the demo test login. Harden to OTP before a public domain launch.
+    // Internal Unframe admins get the all-partners view, verified by the same
+    // emailed one-time code as partners.
     if (isAdminEmail(emailLower)) {
+      const otp = generateOtp();
       const session = await getSession(req, res);
-      session.isAdmin = true;
-      session.email = emailLower;
-      session.name = displayNameFromEmail(emailLower);
-      session.partnerAccountId = null;
-      session.partnerAccountName = null;
-      session.partnerType = null;
+      session.pendingEmail = emailLower;
+      session.pendingIsAdmin = true;
+      session.pendingName = displayNameFromEmail(emailLower);
+      session.pendingAccountId = null;
+      session.pendingAccountName = null;
+      session.pendingPartnerType = null;
+      session.pendingContactId = null;
+      session.otpHash = hashOtp(otp);
+      session.otpExpiry = Date.now() + 10 * 60 * 1000;
       await session.save();
-      return res.status(200).json({ ok: true, adminLogin: true });
+      try {
+        await sendOtpEmail(emailLower, otp);
+      } catch (err) {
+        console.error('SMTP send failed:', err);
+        return res.status(502).json({ error: `Could not send the login code: ${err?.message || 'email delivery failed'}` });
+      }
+      return res.status(200).json({ ok: true });
     }
 
     let partner;
@@ -79,7 +107,8 @@ export default async function handler(req, res) {
 
     const otp = generateOtp();
     const session = await getSession(req, res);
-    session.pendingEmail = email.trim().toLowerCase();
+    session.pendingEmail = emailLower;
+    session.pendingIsAdmin = false;
     session.pendingAccountId = partner.accountId;
     session.pendingAccountName = partner.accountName;
     session.pendingPartnerType = partner.partnerType;
@@ -90,21 +119,7 @@ export default async function handler(req, res) {
     await session.save();
 
     try {
-      await mailTransport.sendMail({
-        from: process.env.SMTP_FROM || `Unframe Partner Portal <${process.env.SMTP_USER}>`,
-        to: email.trim(),
-        subject: 'Your login code',
-        html: `
-  <div style="font-family: 'Poppins', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; color: #141414;">
-    <div style="height: 4px; background: #7800FF; border-radius: 2px; margin-bottom: 24px;"></div>
-    <div style="font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 20px;"><span style="color: #7800FF;">U</span>nframe</div>
-    <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 8px;">Your login code</h2>
-    <p style="color: #3D3D42; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">Enter this code in the Partner Portal. It expires in 10 minutes.</p>
-    <div style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #141414; margin-bottom: 24px;">${otp}</div>
-    <p style="font-size: 13px; color: #6E6E75; margin: 0;">If you didn’t request this, you can ignore this email.</p>
-  </div>
-        `,
-      });
+      await sendOtpEmail(emailLower, otp);
     } catch (err) {
       console.error('SMTP send failed:', err);
       const detail = err?.message || 'email delivery failed';
@@ -131,6 +146,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Incorrect code. Please try again.' });
     }
 
+    const wasAdmin = !!session.pendingIsAdmin;
+    session.isAdmin = wasAdmin;
     session.partnerAccountId = session.pendingAccountId;
     session.partnerAccountName = session.pendingAccountName;
     session.partnerType = session.pendingPartnerType;
@@ -140,6 +157,7 @@ export default async function handler(req, res) {
 
     session.otpHash = null;
     session.otpExpiry = null;
+    session.pendingIsAdmin = null;
     session.pendingAccountId = null;
     session.pendingAccountName = null;
     session.pendingPartnerType = null;
@@ -148,7 +166,7 @@ export default async function handler(req, res) {
     session.pendingEmail = null;
     await session.save();
 
-    return res.status(200).json({ ok: true });
+    return res.status(200).json({ ok: true, isAdmin: wasAdmin });
   }
 
   if (req.method === 'DELETE') {
