@@ -1,7 +1,16 @@
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
-import { findPartnerByEmail } from '../../lib/salesforce';
+import { findPartnerByEmail, isAdminEmail } from '../../lib/salesforce';
 import { getSession } from '../../lib/session';
+
+function displayNameFromEmail(email) {
+  const local = (email || '').split('@')[0] || '';
+  return local
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+    .join(' ') || 'Admin';
+}
 
 const mailTransport = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -27,6 +36,20 @@ export default async function handler(req, res) {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email required.' });
     const emailLower = email.trim().toLowerCase();
+
+    // Internal Unframe admins get the all-partners view. Signed in immediately,
+    // like the demo test login. Harden to OTP before a public domain launch.
+    if (isAdminEmail(emailLower)) {
+      const session = await getSession(req, res);
+      session.isAdmin = true;
+      session.email = emailLower;
+      session.name = displayNameFromEmail(emailLower);
+      session.partnerAccountId = null;
+      session.partnerAccountName = null;
+      session.partnerType = null;
+      await session.save();
+      return res.status(200).json({ ok: true, adminLogin: true });
+    }
 
     let partner;
     try {

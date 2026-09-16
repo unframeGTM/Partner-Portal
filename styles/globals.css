@@ -291,3 +291,27 @@ tr:hover td { background: #FAFAFB; }
 .field-row > .form-group { flex: 1 1 240px; }
 
 .btn-lg { padding: 14px 28px; font-size: 15px; border-radius: 10px; margin-top: 10px; }
+
+/* ===== Admin view ===== */
+.admin-tag {
+  font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: #fff; background: var(--brand-purple);
+  padding: 3px 9px; border-radius: 5px;
+}
+.acc-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 40px; }
+.acc-item { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.acc-item.open { border-color: var(--brand-blue); }
+.acc-head {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  background: none; border: none; cursor: pointer; text-align: left;
+  padding: 16px 18px; font-family: inherit;
+}
+.acc-head:hover { background: #FAFAFB; }
+.acc-caret { color: var(--ink-3); font-size: 12px; transition: transform .15s; flex: none; }
+.acc-item.open .acc-caret { transform: rotate(90deg); color: var(--brand-blue); }
+.acc-name { font-weight: 600; font-size: 15px; color: var(--ink); }
+.acc-meta { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.acc-count { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.acc-body { border-top: 1px solid var(--line-soft); padding: 8px 18px 18px; }
+.acc-note { font-size: 14px; color: var(--ink-3); padding: 14px 2px; }
+.acc-body table { box-shadow: none; }

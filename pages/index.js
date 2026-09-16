@@ -23,6 +23,10 @@ export default function Login() {
 
     const data = await res.json();
     if (res.ok) {
+      if (data.adminLogin) {
+        router.push('/admin');
+        return;
+      }
       if (data.testLogin) {
         router.push('/dashboard');
         return;
