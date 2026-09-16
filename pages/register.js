@@ -12,7 +12,7 @@ const EMPTY = {
 const REQUIRED = [
   'partnerCompany', 'partnerEmail', 'partnerFirstName', 'partnerLastName',
   'prospectCompany', 'prospectEmail', 'prospectWebsite', 'prospectHQ',
-  'prospectFirstName', 'prospectLastName',
+  'prospectFirstName', 'prospectLastName', 'prospectTitle',
   'closeAmount', 'closeDate', 'dealDescription',
 ];
 
@@ -137,7 +137,7 @@ export default function Register() {
               <Field label="Prospect Last Name" name="prospectLastName" required value={v('prospectLastName')} onChange={update} />
             </div>
             <div className="field-row">
-              <Field label="Prospect Title" name="prospectTitle" value={v('prospectTitle')} onChange={update} />
+              <Field label="Prospect Title" name="prospectTitle" required value={v('prospectTitle')} onChange={update} />
               <Field label="Prospect Phone" name="prospectPhone" type="tel" value={v('prospectPhone')} onChange={update} />
             </div>
 

@@ -18,6 +18,7 @@ export default withAuth(async function handler(req, res) {
     'Prospect Company HQ': b.prospectHQ,
     'Prospect First Name': b.prospectFirstName,
     'Prospect Last Name': b.prospectLastName,
+    'Prospect Title': b.prospectTitle,
     'Estimated Close Amount': b.closeAmount,
     'Estimated Close Date': b.closeDate,
     'Deal Description': b.dealDescription,
