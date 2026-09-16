@@ -27,8 +27,7 @@ export default withAuth(async function handler(req, res) {
     return res.status(400).json({ error: `Please complete: ${missing.join(', ')}.` });
   }
 
-  const { id, accountId } = await createDealRegistration({
-    partnerAccountId: req.session.partnerAccountId,
+  const { id } = await createDealRegistration({
     partnerAccountName: req.session.partnerAccountName,
     partnerCompany: b.partnerCompany,
     partnerEmail: b.partnerEmail,
@@ -49,5 +48,5 @@ export default withAuth(async function handler(req, res) {
     dealDescription: b.dealDescription,
   });
 
-  return res.status(201).json({ id, accountId });
+  return res.status(201).json({ id });
 });
