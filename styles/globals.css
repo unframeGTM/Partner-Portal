@@ -246,3 +246,15 @@ tr:hover td { background: #FAFAFB; }
 
 /* "You" tag on a deal you personally registered */
 .you-tag { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--info-bg); color: var(--info-fg); vertical-align: middle; }
+
+/* ===== Deal registration form ===== */
+.form-section {
+  margin: 26px 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--ink-3);
+}
+.form-section:first-of-type { margin-top: 8px; }
+.field-row { display: flex; gap: 14px; flex-wrap: wrap; }
+.field-row > .form-group { flex: 1 1 200px; }

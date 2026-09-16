@@ -1,89 +1,81 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 
+const EMPTY = {
+  partnerCompany: '', partnerEmail: '', partnerFirstName: '', partnerLastName: '', distributor: '',
+  prospectCompany: '', prospectEmail: '', prospectWebsite: '', prospectHQ: '',
+  prospectFirstName: '', prospectLastName: '', prospectTitle: '', prospectPhone: '',
+  closeAmount: '', closeDate: '', meetingDate: '', dealDescription: '',
+};
+
+const REQUIRED = [
+  'partnerCompany', 'partnerEmail', 'partnerFirstName', 'partnerLastName',
+  'prospectCompany', 'prospectEmail', 'prospectWebsite', 'prospectHQ',
+  'prospectFirstName', 'prospectLastName',
+  'closeAmount', 'closeDate', 'dealDescription',
+];
+
+function Field({ label, name, required, type = 'text', value, onChange, placeholder, textarea }) {
+  return (
+    <div className="form-group">
+      <label htmlFor={name}>
+        {label}{required && ' *'}
+        {!required && <span style={{ color: 'var(--ink-3)', fontWeight: 400 }}> (optional)</span>}
+      </label>
+      {textarea ? (
+        <textarea id={name} name={name} value={value} onChange={onChange} placeholder={placeholder} required={required} />
+      ) : (
+        <input id={name} name={name} type={type} value={value} onChange={onChange} placeholder={placeholder} required={required} autoComplete="off" />
+      )}
+    </div>
+  );
+}
+
 export default function Register() {
-  const [accountQuery, setAccountQuery] = useState('');
-  const [accountSuggestions, setAccountSuggestions] = useState([]);
-  const [selectedAccount, setSelectedAccount] = useState(null);
-  const [openOppWarning, setOpenOppWarning] = useState(null);
-  const [isNewCompany, setIsNewCompany] = useState(false);
-  const [newCompanyName, setNewCompanyName] = useState('');
-  const [newCompanyWebsite, setNewCompanyWebsite] = useState('');
-  const [useCase, setUseCase] = useState('');
-  const [estimatedAmount, setEstimatedAmount] = useState('');
-  const [closeDate, setCloseDate] = useState('');
+  const [form, setForm] = useState(EMPTY);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const searchTimeout = useRef(null);
   const router = useRouter();
 
-  function handleAccountInput(e) {
-    const val = e.target.value;
-    setAccountQuery(val);
-    setSelectedAccount(null);
-    setOpenOppWarning(null);
-    setIsNewCompany(false);
+  // Pre-fill the partner section from the signed-in partner's session.
+  useEffect(() => {
+    fetch('/api/me')
+      .then(r => (r.ok ? r.json() : null))
+      .then(me => {
+        if (!me) return;
+        const parts = (me.name || '').trim().split(/\s+/).filter(Boolean);
+        setForm(f => ({
+          ...f,
+          partnerCompany: me.partnerAccountName || '',
+          partnerEmail: me.email || '',
+          partnerFirstName: parts[0] || '',
+          partnerLastName: parts.length > 1 ? parts.slice(1).join(' ') : '',
+        }));
+      })
+      .catch(() => {});
+  }, []);
 
-    clearTimeout(searchTimeout.current);
-    if (val.length < 2) { setAccountSuggestions([]); return; }
-
-    searchTimeout.current = setTimeout(async () => {
-      const res = await fetch(`/api/accounts?q=${encodeURIComponent(val)}`);
-      if (res.ok) setAccountSuggestions(await res.json());
-    }, 300);
-  }
-
-  async function selectAccount(acct) {
-    setSelectedAccount(acct);
-    setAccountQuery(acct.Name);
-    setAccountSuggestions([]);
-    setIsNewCompany(false);
-    setOpenOppWarning(null);
-    try {
-      const res = await fetch(`/api/check-account?accountId=${encodeURIComponent(acct.Id)}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.hasOpenOpp) setOpenOppWarning(data.opp);
-      }
-    } catch (_) { /* non-blocking */ }
-  }
-
-  function chooseNewCompany() {
-    setSelectedAccount(null);
-    setNewCompanyName(accountQuery);
-    setIsNewCompany(true);
-    setAccountSuggestions([]);
-    setOpenOppWarning(null);
+  function update(e) {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
-
-    if (!isNewCompany && !selectedAccount) {
-      setError('Please select a customer account, or register a new company.');
-      return;
-    }
-    if (isNewCompany && !newCompanyWebsite) {
-      setError('A website is required for a new company (e.g. acme.com).');
-      return;
-    }
-    if (!useCase.trim()) {
-      setError('Please describe the deal / use case.');
+    const missing = REQUIRED.filter(k => !String(form[k] ?? '').trim());
+    if (missing.length) {
+      setError('Please complete all required fields marked with *.');
       return;
     }
     setLoading(true);
     setError('');
 
-    const body = isNewCompany
-      ? { customerName: newCompanyName, customerWebsite: newCompanyWebsite, useCase, estimatedAmount, closeDate }
-      : { customerAccountId: selectedAccount.Id, customerName: selectedAccount.Name, useCase, estimatedAmount, closeDate };
-
     const res = await fetch('/api/registrations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(form),
     });
 
     if (res.ok) {
@@ -96,6 +88,8 @@ export default function Register() {
     }
   }
 
+  const v = name => form[name];
+
   return (
     <>
       <nav className="nav">
@@ -107,98 +101,53 @@ export default function Register() {
 
       <div className="container">
         <div className="page-header">
-          <h1>Register a Deal</h1>
+          <h1>Register an Opportunity</h1>
         </div>
 
-        <div style={{ maxWidth: 560 }}>
+        <div style={{ maxWidth: 620 }}>
           <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 24, marginTop: -4 }}>
-            Registering a deal creates an opportunity in Unframe’s pipeline, tied to your organization. The Unframe team reviews and advances it from there.
+            Fill out the registration form to provide details about your opportunity. Submitting creates an opportunity in Unframe’s pipeline, tied to your organization; the Unframe team follows up from there.
           </p>
 
           {success && (
-            <div className="success-msg">Deal registered. It’s now in Unframe’s pipeline. Redirecting…</div>
+            <div className="success-msg">Opportunity registered. It’s now in Unframe’s pipeline. Redirecting…</div>
           )}
           {error && <div className="error-msg">{error}</div>}
 
           <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label htmlFor="account">Customer account *</label>
-              {!isNewCompany ? (
-                <div className="autocomplete-wrap">
-                  <input
-                    id="account"
-                    type="text"
-                    value={accountQuery}
-                    onChange={handleAccountInput}
-                    placeholder="Search for the end customer…"
-                    autoComplete="off"
-                  />
-                  {accountSuggestions.length > 0 && (
-                    <div className="autocomplete-list">
-                      {accountSuggestions.map(a => (
-                        <div key={a.Id} className="autocomplete-item" onClick={() => selectAccount(a)}>
-                          <span>{a.Name}</span>
-                          {a.Website && <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{a.Website}</div>}
-                        </div>
-                      ))}
-                      {accountQuery.length >= 2 && (
-                        <div className="autocomplete-item" style={{ borderTop: '1px solid var(--line)', color: 'var(--brand-blue)' }} onClick={chooseNewCompany}>
-                          + Register "{accountQuery}" as a new company
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {selectedAccount && (
-                    <div style={{ marginTop: 6, fontSize: 12, color: 'var(--ok-fg)' }}>
-                      Selected: {selectedAccount.Name}
-                    </div>
-                  )}
-                  {openOppWarning && (
-                    <div style={{ marginTop: 8, padding: '10px 14px', background: 'var(--warn-bg)', border: '1px solid #F2D9A6', borderRadius: 6, fontSize: 13, color: 'var(--warn-fg)' }}>
-                      Heads up: this account already has an open opportunity
-                      {openOppWarning.partner ? ` tied to ${openOppWarning.partner}` : ''} ({openOppWarning.stage}). You can still register — the Unframe team will de-dupe if needed.
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div>
-                  <div className="form-group" style={{ marginBottom: 10 }}>
-                    <input type="text" value={newCompanyName} onChange={e => setNewCompanyName(e.target.value)} placeholder="Company name" required />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 4 }}>
-                    <input type="text" value={newCompanyWebsite} onChange={e => setNewCompanyWebsite(e.target.value)} placeholder="Website (e.g. acme.com) — required" required />
-                  </div>
-                  <button type="button" className="btn btn-secondary btn-sm" style={{ marginTop: 6 }} onClick={() => { setIsNewCompany(false); setAccountQuery(''); }}>
-                    Search existing accounts instead
-                  </button>
-                </div>
-              )}
+            <div className="form-section">Partner</div>
+            <Field label="Partner Company" name="partnerCompany" required value={v('partnerCompany')} onChange={update} />
+            <Field label="Partner Email" name="partnerEmail" type="email" required value={v('partnerEmail')} onChange={update} />
+            <div className="field-row">
+              <Field label="Partner First Name" name="partnerFirstName" required value={v('partnerFirstName')} onChange={update} />
+              <Field label="Partner Last Name" name="partnerLastName" required value={v('partnerLastName')} onChange={update} />
+            </div>
+            <Field label="Distributor" name="distributor" value={v('distributor')} onChange={update} placeholder="If this deal is through a distributor" />
+
+            <div className="form-section">Prospect</div>
+            <Field label="Prospect Company" name="prospectCompany" required value={v('prospectCompany')} onChange={update} />
+            <Field label="Prospect Email" name="prospectEmail" type="email" required value={v('prospectEmail')} onChange={update} />
+            <Field label="Prospect Company Website" name="prospectWebsite" required value={v('prospectWebsite')} onChange={update} placeholder="e.g. acme.com" />
+            <Field label="Prospect Company HQ" name="prospectHQ" required value={v('prospectHQ')} onChange={update} placeholder="City, Country" />
+            <div className="field-row">
+              <Field label="Prospect First Name" name="prospectFirstName" required value={v('prospectFirstName')} onChange={update} />
+              <Field label="Prospect Last Name" name="prospectLastName" required value={v('prospectLastName')} onChange={update} />
+            </div>
+            <div className="field-row">
+              <Field label="Prospect Title" name="prospectTitle" value={v('prospectTitle')} onChange={update} />
+              <Field label="Prospect Phone" name="prospectPhone" type="tel" value={v('prospectPhone')} onChange={update} />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="useCase">Deal / use case *</label>
-              <textarea
-                id="useCase"
-                value={useCase}
-                onChange={e => setUseCase(e.target.value)}
-                placeholder="What is the opportunity? Describe the use case, the buyer, and why now."
-                required
-              />
+            <div className="form-section">Deal</div>
+            <div className="field-row">
+              <Field label="Estimated Close Amount" name="closeAmount" type="number" required value={v('closeAmount')} onChange={update} placeholder="e.g. 100000" />
+              <Field label="Estimated Close Date" name="closeDate" type="date" required value={v('closeDate')} onChange={update} />
             </div>
+            <Field label="Prospect Date of Meeting" name="meetingDate" type="date" value={v('meetingDate')} onChange={update} />
+            <Field label="Deal Description" name="dealDescription" required textarea value={v('dealDescription')} onChange={update} placeholder="Describe the opportunity: the use case, the buyer, and why now." />
 
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <div className="form-group" style={{ flex: '1 1 200px' }}>
-                <label htmlFor="amount">Estimated deal size <span style={{ color: 'var(--ink-3)', fontWeight: 400 }}>(optional)</span></label>
-                <input id="amount" type="number" min="0" step="1000" value={estimatedAmount} onChange={e => setEstimatedAmount(e.target.value)} placeholder="e.g. 100000" />
-              </div>
-              <div className="form-group" style={{ flex: '1 1 200px' }}>
-                <label htmlFor="close">Expected close <span style={{ color: 'var(--ink-3)', fontWeight: 400 }}>(optional)</span></label>
-                <input id="close" type="date" value={closeDate} onChange={e => setCloseDate(e.target.value)} />
-              </div>
-            </div>
-
-            <button className="btn btn-primary" type="submit" disabled={loading || success}>
-              {loading ? 'Registering…' : 'Register deal'}
+            <button className="btn btn-primary" type="submit" disabled={loading || success} style={{ marginTop: 8 }}>
+              {loading ? 'Registering…' : 'Register opportunity'}
             </button>
           </form>
         </div>
